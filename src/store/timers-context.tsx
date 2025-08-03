@@ -1,6 +1,6 @@
-import { type ReactNode, createContext, useContext } from "react";
+import { type ReactNode, createContext, useContext, useReducer } from "react";
 
-type Timer = {
+export type Timer = {
     name: string;
     duration: number;
 };
@@ -10,11 +10,30 @@ type TimerState = {
     timers: Timer[];
 };
 
+const initialState: TimerState = {
+    isRunning: true,
+    timers: []
+}
+
 type TimerContextValue = TimerState & {
     addTimer: (timerData: Timer) => void;
-    startTimer: () => void;
-    stopTimer: () => void;
+    startTimers: () => void;
+    stopTimers: () => void;
 };
+
+type AddTimerAction = {
+    type: 'ADD_TIMER',
+    payload: Timer
+}
+
+type StartTimerAction = {
+    type: 'START_TIMERS'
+}
+
+type StopTimerAction = {
+    type: 'STOP_TIMERS'
+}
+type Action = AddTimerAction | StartTimerAction | StopTimerAction;
 
 const TimersContext = createContext<TimerContextValue | null>(null);
 
@@ -32,18 +51,49 @@ type TimersContextProviderProps = {
     children: ReactNode;
 };
 
-export default function TimersContextProvider({children}: TimersContextProviderProps) {
-    const ctx: TimerContextValue = {
-        timers: [],
-        isRunning: false,
-        addTimer(timerData) {
+function timersReducer(state: TimerState, action: Action): TimerState {
+    if (action.type === 'ADD_TIMER') {
+        return {
+            ...state,
+            timers: [
+                ...state.timers,
+                {
+                    name: action.payload.name,
+                    duration: action.payload.duration
+                }
+            ],
+        }
+    }
+    if (action.type === 'START_TIMERS') {
+        return {
+            ...state,
+            isRunning: true
+        }
+    }
+    if (action.type === 'STOP_TIMERS') {
+        return {
+            ...state,
+            isRunning: false
+        }
+    }
 
+    return state;
+}
+
+export default function TimersContextProvider({children}: TimersContextProviderProps) {
+    const [timersState, dispatch] = useReducer(timersReducer, initialState);
+
+    const ctx: TimerContextValue = {
+        timers: timersState.timers,
+        isRunning: timersState.isRunning,
+        addTimer(timerData) {
+            dispatch({ type: 'ADD_TIMER', payload: timerData });
         },
-        startTimer() {
-            
+        startTimers() {
+            dispatch({ type: 'START_TIMERS'});
         },
-        stopTimer() {
-            
+        stopTimers() {
+            dispatch({ type: 'STOP_TIMERS'});
         },
     };
     return (
